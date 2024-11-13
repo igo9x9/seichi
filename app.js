@@ -1,6 +1,6 @@
 phina.globalize();
 
-const version = "0.5";
+const version = "0.7";
 
 ASSETS = {
     image: {
@@ -32,9 +32,14 @@ phina.define('TitleScene', {
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-1.3));
 
         this.setInteractive(true);
-        this.on("pointstart", () => self.exit("MenuScene"));
+        this.on("pointstart", () => {
+            mouse.tweener.by({y:-20}, 100).by({y:20}, 100)
+            .call(function() {
+                self.exit("MenuScene");
+            }).play();
+        });
 
-        Sprite("mouse").addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+        const mouse = Sprite("mouse").addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
 
         Label({
             text: "TAP TO START",
@@ -73,7 +78,12 @@ phina.define('MenuScene', {
 
         const backButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7));
         backButton.setInteractive(true);
-        backButton.on("pointstart", () => self.exit("TitleScene"));
+        backButton.on("pointstart", () => {
+            backButton.tweener.by({y:-20}, 100).by({y:20}, 100)
+            .call(function() {
+                self.exit("TitleScene");
+            }).play();
+        });
     },
 });
 
@@ -100,7 +110,12 @@ phina.define('MainScene', {
 
         const backButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7));
         backButton.setInteractive(true);
-        backButton.on("pointstart", () => self.exit("MenuScene"));
+        backButton.on("pointstart", () => {
+            backButton.tweener.by({y:-20}, 100).by({y:20}, 100)
+            .call(function() {
+                self.exit("MenuScene");
+            }).play();
+        });
 
         // 最初の地の数
         let areaCnt = 0;
