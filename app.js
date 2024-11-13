@@ -2,6 +2,13 @@ phina.globalize();
 
 const version = "0.5";
 
+ASSETS = {
+    image: {
+        "mouse": "img/mouse.png",
+        "mouse2": "img/mouse2.png",
+    }
+};
+
 phina.define('TitleScene', {
     superClass: 'DisplayScene',
     init: function(param/*{}*/) {
@@ -12,8 +19,8 @@ phina.define('TitleScene', {
         this.backgroundColor = "PeachPuff";
 
         Label({
-            text: "囲碁整地パズル",
-            fontSize: 70,
+            text: "整地の練習",
+            fontSize: 40,
             fill: "black",
             fontWeight: 800,
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-2));
@@ -22,14 +29,16 @@ phina.define('TitleScene', {
             text: "version " + version,
             fontSize: 20,
             fill: "black",
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-1));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-1.3));
 
         this.setInteractive(true);
         this.on("pointstart", () => self.exit("MenuScene"));
 
+        Sprite("mouse").addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+
         Label({
             text: "TAP TO START",
-            fontSize: 30,
+            fontSize: 20,
             fill: "black",
             fontWeight: 800,
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(4));
@@ -54,8 +63,17 @@ phina.define('MenuScene', {
             }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.span(i * 2 + 3));
     
             btn.setInteractive(true);
-            btn.on("pointstart", () => self.exit("MainScene", {kifuIndex: i}));
+            btn.on("pointstart", () => {
+                btn.tweener.by({y:-20}, 100).by({y:20}, 100)
+                .call(function() {
+                    self.exit("MainScene", {kifuIndex: i});
+                }).play();
+            });
         });
+
+        const backButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7));
+        backButton.setInteractive(true);
+        backButton.on("pointstart", () => self.exit("TitleScene"));
     },
 });
 
@@ -73,6 +91,16 @@ phina.define('MainScene', {
         let handColorLastPosition = {x: null, y: null};
 
         const stones = new Stones();
+
+        Label({
+            text: "練習" + (param.kifuIndex + 1),
+            fontSize: 30,
+            fontWeight: 800,
+        }).addChildTo(this).setPosition(50,35);
+
+        const backButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7));
+        backButton.setInteractive(true);
+        backButton.on("pointstart", () => self.exit("MenuScene"));
 
         // 最初の地の数
         let areaCnt = 0;
@@ -102,20 +130,11 @@ phina.define('MainScene', {
             }
         };
 
-        const backButton = BasicButton({
-            text: "やめる",
-            width: 120,
-            height: 50,
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(7));
-        backButton.setInteractive(true);
-        backButton.on("pointstart", () => self.exit("MenuScene"));
-        backButton.hide();
-
         // コメント表示
         const commentBox = LabelArea({
             width: this.width - 50,
             height: 300,
-            text: "白地（カラフルな部分）を整地して、地を数えやすくしましょう！\n石の移動は、石をクリックしてから移動したい場所をクリックします。\n（移動できない石もあります）",
+            text: "白地（カラフルな部分）を整地して、地を数えやすくしましょう！",
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.5));
 
 
@@ -140,7 +159,6 @@ phina.define('MainScene', {
                 comment = "できるだけ長方形に近い形になるようにしましょう！";
             } else {
                 comment = "完成です！";
-                backButton.setText("おわる");
             }
             commentBox.text = comment;
         }
@@ -167,10 +185,11 @@ phina.define('MainScene', {
                 // タップした石を手に持つ
                 handColor = clickedColor;
                 handColorLastPosition = {x: x, y: y};
-                stones.removeStone(x, y);
-                goban.drawStones(stones);
+                stoneShape.hide();
                 goban.createHandStone("black", x, y).then(function() {
-                    const groups = stones.group();
+                    stones.removeStone(x, y);
+                    goban.drawStones(stones);
+                        const groups = stones.group();
                     goban.drawWhiteArea(groups);
                 });
 
@@ -191,9 +210,10 @@ phina.define('MainScene', {
     
                     handColor = clickedColor;
                     handColorLastPosition = {x: x, y: y};
-                    stones.removeStone(x, y);
-                    goban.drawStones(stones);
+                    stoneShape.hide();
                     goban.createHandStone("white", x, y).then(function() {
+                        stones.removeStone(x, y);
+                        goban.drawStones(stones);
                         const groups = stones.group();
                         goban.drawWhiteArea(groups);
                     });
@@ -205,7 +225,7 @@ phina.define('MainScene', {
                         return;
                     }
                     stones.removeStone(x, y);
-                    goban.drawStones(stones);
+                    stoneShape.hide();
 
                     goban.moveStone("white", x, y, handColorLastPosition.x, handColorLastPosition.y)
                     .then(function() {
@@ -765,7 +785,7 @@ phina.define('BasicButton', {
 
 phina.main(function() {
     App = GameApp({
-        // assets: ASSETS,
+        assets: ASSETS,
         startLabel: 'TitleScene',
         scenes: [
             {
