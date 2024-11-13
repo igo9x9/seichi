@@ -17,6 +17,9 @@ phina.define('MainScene', {
 
         const stones = new Stones();
 
+        // 最初の地の数
+        let areaCnt = 0;
+
         const data = kifu;//[0];
         for (let y = 0; y < data.length; y++) {
             const rows = data[y].split("");
@@ -32,6 +35,7 @@ phina.define('MainScene', {
                     color = "white";
                 } else {
                     color = "empty";
+                    areaCnt += 1;
                 }
 
                 if (color !== "empty") {
@@ -40,7 +44,33 @@ phina.define('MainScene', {
             }
         };
 
-        const stoneClickCallback = function(x, y) {
+        // コメント表示
+        const commentBox = LabelArea({
+            width: this.width - 50,
+            height: 300,
+            text: "白地を整地してください。石をクリックして取ったら、移動したい場所をクリックします。\n（移動できない石もあります）",
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.5));
+
+
+        function judge() {
+
+            let comment = "";
+            const result = stones.judge();
+
+            // とりあえず地の数が違っていたらだめ
+            if (goban.groupShapesCnt() !== areaCnt) {
+                comment = "地の境界があいまいになっているようです…。黒石と白石を入れ替えて、境界をはっきりさせておきましょう！";
+            } else if (result.tyouhoukeiNG > 1) {
+                comment = "できるだけ長方形になるようにしましょう！";
+            } else if (result.baisuNG > 1) {
+                comment = "できるだけ５の倍数になるようにしましょう！";
+            } else {
+                comment = "すばらしい！";
+            }
+            commentBox.text = comment;
+        }
+
+        const stoneClickCallback = function(x, y, stoneShape) {
 
             const clickedColor = stones.getColor(x, y);
 
@@ -49,11 +79,13 @@ phina.define('MainScene', {
 
                 // 既に石を持っているなら、なにも起きない
                 if (handColor !== "empty") {
+                    purupuru(stoneShape);
                     return;
                 }
 
                 // 黒石を取れるのは、呼吸点を持つ黒石の場合のみ
                 if (stones.hasKokyuten(x, y) === false) {
+                    purupuru(stoneShape);
                     return;
                 }
 
@@ -61,10 +93,11 @@ phina.define('MainScene', {
                 handColor = clickedColor;
                 handColorLastPosition = {x: x, y: y};
                 stones.removeStone(x, y);
-
                 goban.drawStones(stones);
-                const groups = stones.group();
-                goban.drawWhiteArea(groups);
+                goban.createHandStone("black", x, y).then(function() {
+                    const groups = stones.group();
+                    goban.drawWhiteArea(groups);
+                });
 
                 return;
             }
@@ -77,32 +110,48 @@ phina.define('MainScene', {
         
                     // ただし、呼吸点を持たない石はダメ
                     if (stones.hasKokyuten(x, y) === false) {
+                        purupuru(stoneShape);
                         return;
                     }
     
                     handColor = clickedColor;
                     handColorLastPosition = {x: x, y: y};
                     stones.removeStone(x, y);
-
                     goban.drawStones(stones);
-                    const groups = stones.group();
-                    goban.drawWhiteArea(groups);
+                    goban.createHandStone("white", x, y).then(function() {
+                        const groups = stones.group();
+                        goban.drawWhiteArea(groups);
+                    });
 
                 } else if (handColor === "black") {
                     // 黒石を持っている場合、呼吸点を持たない白石となら交換可能
                     if (stones.hasKokyuten(x, y) === true) {
+                        purupuru(stoneShape);
                         return;
                     }
                     stones.removeStone(x, y);
-                    stones.putStone("white", handColorLastPosition.x, handColorLastPosition.y);
-                    stones.putStone("black", x, y);
-
-                    handColor = "empty";
-                    handColorLastPosition = {x: null, y: null};
-    
                     goban.drawStones(stones);
-                    const groups = stones.group();
-                    goban.drawWhiteArea(groups);
+
+                    goban.moveStone("white", x, y, handColorLastPosition.x, handColorLastPosition.y)
+                    .then(function() {
+                        stones.putStone("white", handColorLastPosition.x, handColorLastPosition.y);
+                        goban.drawStones(stones);
+                        handColor = "empty";
+                        handColorLastPosition = {x: null, y: null};
+    
+                        goban.removeHandStone(x, y).then(function() {
+                            stones.putStone("black", x, y);
+                            goban.drawStones(stones);
+                            const groups = stones.group();
+                            goban.drawWhiteArea(groups);
+                            judge();
+                        });
+                    });
+    
+
+                } else {
+                    // 白石をクリックしてもなにも起きない
+                    purupuru(stoneShape);
                 }
             }
 
@@ -119,45 +168,27 @@ phina.define('MainScene', {
                     return;
                 }
 
+                goban.removeHandStone(x, y).then(function() {
+                    // 持っている石を置く
+                    stones.putStone(handColor, x, y);
+                    handColor = "empty";
+                    handColorLastPosition = {x: null, y: null};
 
-                // 持っている石を置く
-                stones.putStone(handColor, x, y);
-                handColor = "empty";
-                handColorLastPosition = {x: null, y: null};
-
-                goban.drawStones(stones);
-                const groups = stones.group();
-                goban.drawWhiteArea(groups);
+                    goban.drawStones(stones);
+                    const groups = stones.group();
+                    goban.drawWhiteArea(groups);
+                    judge();
+                });
             }
 
-            // if (handColor === "empty") {
-            // // 石を持っていないなら、タップした石を持つ
+            function purupuru(stone) {
+                stone.tweener
+                .by({x: -8}, 50).by({x: 16}, 50).by({x: -16}, 50).by({x: 8}, 50)
+                .by({x: -4}, 50).by({x: 8}, 50).by({x: -8}, 50).by({x: 4}, 50)
+                .play();
+            }
 
-            //     // ただし、呼吸点を持たない石はダメ
-            //     if (stones.hasKokyuten(x, y) === false) {
-            //         return;
-            //     }
 
-            //     // タップした石を手に持つ
-            //     handColor = clickedColor;
-            //     stones.removeStone(x, y);
-
-            // } else {
-            //     // 石を持っているなら、その石を置く
-
-            //     const stoneColor = stones.getColor(x, y);
-
-            //     // 置けるのは空点にのみ
-            //     if (stoneColor === "empty") {
-            //         stones.putStone(handColor, x, y);
-            //         handColor = "empty";
-            //     }
-
-            // };
-            // goban.drawStones(stones);
-
-            // const groups = stones.group();
-            // goban.drawWhiteArea(groups);
         };
         
         const goban = new Goban(stoneClickCallback);
@@ -199,6 +230,10 @@ const Goban = function(stoneClickCallback) {
     const stoneShapes = [];
     const groupShapes = [];
 
+    self.groupShapesCnt = function() {
+        return groupShapes.length;
+    };
+
     (13).times(function(spanX) {
         var startPoint = Vector2((spanX - 6) * grid.unitWidth, -1 * grid.width/2),
             endPoint = Vector2((spanX - 6) * grid.unitWidth, grid.width/2);
@@ -226,7 +261,7 @@ const Goban = function(stoneClickCallback) {
     
             stone.setInteractive(true);
             stone.on("pointstart", function() {
-                stoneClickCallback(x, y);
+                stoneClickCallback(x, y, stone);
             });
 
 
@@ -285,6 +320,52 @@ const Goban = function(stoneClickCallback) {
 
 
         }
+    };
+
+    self.handStoneShape = null;
+
+    self.createHandStone = function(color, x, y) {
+        return Flow(function(resolve) {
+            self.handStoneShape = CircleShape({
+                strokeWidth: 1,
+                radius: grid.unitWidth / 2,
+                fill: color,
+                strokeWidth: 0,
+            }).addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6));
+            self.handStoneShape.tweener.to({x: 0, y:350}, 200)
+            .call(function() {
+                resolve();
+            })
+            .play();
+        });
+    };
+
+    self.removeHandStone = function(x, y) {
+        return Flow(function(resolve) {
+            self.handStoneShape.tweener.to({x: grid.span(x - 6), y:grid.span(y - 6)}, 200)
+            .call(function() {
+                resolve();
+                self.handStoneShape.remove();
+            })
+            .play();
+        });
+    };
+
+    self.moveStone = function(color, x1, y1, x2, y2) {
+        return Flow(function(resolve) {
+            const stone = CircleShape({
+                strokeWidth: 1,
+                radius: grid.unitWidth / 2,
+                fill: color,
+                strokeWidth: 0,
+            }).addChildTo(self.ui).setPosition(grid.span(x1 - 6), grid.span(y1 - 6));
+            stone.tweener.to({x: grid.span(x2 - 6), y:grid.span(y2 - 6)}, 200)
+            .call(function() {
+                resolve();
+                stone.remove();
+            })
+            .play();
+        });
     };
 
 };
@@ -417,9 +498,114 @@ const Stones = function() {
             return ok;
         }
 
-        console.log(groups);
-
         return groups;
+
+    };
+
+
+    // 評価
+    self.judge = function() {
+
+        const groups = self.group();
+
+        let tyouhoukeiNG = 0;
+        let baisuNG = 0;
+
+        for (let i = 0; i < groups.length; i++) {
+            if (isTyouhoukei(groups[i]) === false) {
+                tyouhoukeiNG += 1;
+            }
+            if (isBaisu(groups[i]) === false) {
+                baisuNG += 1;
+            }
+        }
+
+        console.log("長方形ではない：", tyouhoukeiNG);
+        console.log("５の倍数ではない：", baisuNG);
+
+        return {
+            tyouhoukeiNG: tyouhoukeiNG,
+            baisuNG: baisuNG,
+        };
+
+        // ５の倍数かどうか
+        function isBaisu(group) {
+            return group.length % 5 === 0;            
+        }
+
+        // 長方形かどうか
+        function isTyouhoukei(group) {
+
+            // xだけを集める
+            const xList = [];
+            group.forEach(function(cell) {
+                xList.push(cell.x);
+            });
+            const xMax = xList.reduce(function(a, b) {return Math.max(a, b);})
+            const xMin = xList.reduce(function(a, b) {return Math.min(a, b);})
+
+            // yだけを集める
+            const yList = [];
+            group.forEach(function(cell) {
+                yList.push(cell.y);
+            });
+            const yMax = yList.reduce(function(a, b) {return Math.max(a, b);})
+            const yMin = yList.reduce(function(a, b) {return Math.min(a, b);})
+
+            let list;
+
+            // xが最小値である全てのセルのyが、最小値から最大値まで欠けることなく存在すること
+            list = group.filter(function(cell) {
+                return cell.x === xMin;
+            });
+            for (let i = yMin; i <= yMax; i++) {
+                const tmp = list.find(function(cell) {
+                    return cell.y === i;
+                });
+                if (!tmp) {
+                    return false;
+                }
+            }
+
+            // xが最大値である全てのセルのyが、最小値から最大値まで欠けることなく存在すること
+            list = group.filter(function(cell) {
+                return cell.x === xMax;
+            });
+            for (let i = yMin; i <= yMax; i++) {
+                const tmp = list.find(function(cell) {
+                    return cell.y === i;
+                });
+                if (!tmp) {
+                    return false;
+                }
+            }
+
+            // yが最小値である全てのセルのxが、最小値から最大値まで欠けることなく存在すること
+            list = group.filter(function(cell) {
+                return cell.y === yMin;
+            });
+            for (let i = xMin; i <= xMax; i++) {
+                const tmp = list.find(function(cell) {
+                    return cell.x === i;
+                });
+                if (!tmp) {
+                    return false;
+                }
+            }
+
+            // yが最大値である全てのセルのxが、最小値から最大値まで欠けることなく存在すること
+            list = group.filter(function(cell) {
+                return cell.y === yMax;
+            });
+            for (let i = xMin; i <= xMax; i++) {
+                const tmp = list.find(function(cell) {
+                    return cell.x === i;
+                });
+                if (!tmp) {
+                    return false;
+                }
+            }
+        }
 
     };
 
