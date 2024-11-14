@@ -9,6 +9,8 @@ ASSETS = {
     }
 };
 
+let wait = false;
+
 phina.define('TitleScene', {
     superClass: 'DisplayScene',
     init: function(param/*{}*/) {
@@ -225,11 +227,13 @@ phina.define('MainScene', {
                 handColor = clickedColor;
                 handColorLastPosition = {x: x, y: y};
                 stoneShape.hide();
+                wait = true;
                 goban.createHandStone("black", x, y).then(function() {
                     stones.removeStone(x, y);
                     goban.drawStones(stones);
-                        const groups = stones.group();
+                    const groups = stones.group();
                     goban.drawWhiteArea(groups);
+                    wait = false;
                 });
 
                 return;
@@ -250,11 +254,11 @@ phina.define('MainScene', {
                     handColor = clickedColor;
                     handColorLastPosition = {x: x, y: y};
                     stoneShape.hide();
+                    wait = true;
                     goban.createHandStone("white", x, y).then(function() {
                         stones.removeStone(x, y);
                         goban.drawStones(stones);
-                        // const groups = stones.group();
-                        // goban.drawWhiteArea(groups);
+                        wait = false;
                     });
 
                 } else if (handColor === "black") {
@@ -266,6 +270,7 @@ phina.define('MainScene', {
                     stones.removeStone(x, y);
                     stoneShape.hide();
 
+                    wait = true;
                     goban.moveStone("white", x, y, handColorLastPosition.x, handColorLastPosition.y)
                     .then(function() {
                         stones.putStone("white", handColorLastPosition.x, handColorLastPosition.y);
@@ -279,6 +284,7 @@ phina.define('MainScene', {
                             const groups = stones.group();
                             goban.drawWhiteArea(groups);
                             judge();
+                            wait = false;
                         });
                     });
     
@@ -303,6 +309,7 @@ phina.define('MainScene', {
                     return;
                 }
 
+                wait = true;
                 goban.removeHandStone(x, y).then(function() {
                     // 持っている石を置く
                     stones.putStone(handColor, x, y);
@@ -313,6 +320,7 @@ phina.define('MainScene', {
                     const groups = stones.group();
                     goban.drawWhiteArea(groups);
                     judge();
+                    wait = false;
                 });
             }
 
@@ -411,6 +419,7 @@ const Goban = function(stoneClickCallback) {
     
             stone.setInteractive(true);
             stone.on("pointstart", function() {
+                if (wait) return;
                 stoneClickCallback(x, y, stone);
             });
 
@@ -501,7 +510,7 @@ const Goban = function(stoneClickCallback) {
             createHandStoneShape(color);
             self.handStoneShape
             .addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6))
-            .tweener.to({x: 0, y:-350}, 300)
+            .tweener.to({x: 0, y:-350}, 200)
             .call(function() {
                 resolve();
             })
@@ -517,7 +526,7 @@ const Goban = function(stoneClickCallback) {
             createHandStoneShape(color);
             self.handStoneShape
             .addChildTo(self.ui).setPosition(xx, yy)
-            .tweener.to({x: grid.span(x - 6), y:grid.span(y - 6)}, 300)
+            .tweener.to({x: grid.span(x - 6), y:grid.span(y - 6)}, 200)
             .call(function() {
                 resolve();
                 self.handStoneShape.remove();
@@ -549,7 +558,7 @@ const Goban = function(stoneClickCallback) {
                 strokeWidth: 4,
                 stroke: "black",
             }).addChildTo(self.ui).setPosition(grid.span(x1 - 6), grid.span(y1 - 6));
-            stone.tweener.to({x: grid.span(x2 - 6), y:grid.span(y2 - 6)}, 300)
+            stone.tweener.to({x: grid.span(x2 - 6), y:grid.span(y2 - 6)}, 200)
             .call(function() {
                 resolve();
                 stone.remove();
@@ -656,7 +665,7 @@ const Stones = function() {
             if (value === "empty") {
                 const x = Number(key.split(",")[0]);
                 const y = Number(key.split(",")[1]);
-                emptyCells.push({x: x, y: y});
+                emptyCells.push({color: value, x: x, y: y});
             }
         }
 
@@ -674,21 +683,20 @@ const Stones = function() {
         // 黒石に触れていないエリアだったならtrueを返す
         function checkCell(group, x, y) {
 
+            const target = getCell(x, y);
+            let ok = true;
+
             if (self.getColor(x, y) === "black") {
                 return false;
             }
             
-            const targetIndex = getCellIndex(x, y);
-
-            if (targetIndex === -1) {
+            if (!target) {
                 return true;
             }
 
-            group.push({x: x, y: y});
+            group.push(target);
 
-            removeCellByIndex(targetIndex);
-
-            let ok = true;
+            removeCell(x, y);
 
             if (checkCell(group, x + 1, y) === false) {
                 ok = false;
@@ -703,16 +711,16 @@ const Stones = function() {
                 ok = false;
             };
 
-            return ok;
-
-            function getCellIndex(x, y) {
-                return emptyCells.findIndex(cell => cell.x === x && cell.y === y);
+            function getCell(x, y) {
+                return emptyCells.find(cell => cell.x === x && cell.y === y);
             }
     
-            function removeCellByIndex(index) {
+            function removeCell(x, y) {
+                const index = emptyCells.findIndex(cell => cell.x === x && cell.y === y);
                 emptyCells.splice(index, 1);
             }
 
+            return ok;
         }
 
         return groups;
@@ -904,6 +912,7 @@ phina.define('BasicButton', {
     },
 });
 
+
 phina.main(function() {
     App = GameApp({
         assets: ASSETS,
@@ -924,7 +933,7 @@ phina.main(function() {
         ],
     });
 
-    App.fps = 30;
+    App.fps = 60;
 
     App.run();
 
