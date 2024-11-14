@@ -20,7 +20,7 @@ phina.define('TitleScene', {
 
         Label({
             text: "整地の練習",
-            fontSize: 40,
+            fontSize: 50,
             fill: "black",
             fontWeight: 800,
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-2));
@@ -77,8 +77,8 @@ phina.define('MenuScene', {
         });
 
         Label({
-            text: "※難易度順というわけではありません。",
-            fontSize: 15,
+            text: "※難易度順というわけではありません",
+            fontSize: 20,
             fill: "black",
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(5.5));
 
@@ -244,8 +244,8 @@ phina.define('MainScene', {
                     goban.createHandStone("white", x, y).then(function() {
                         stones.removeStone(x, y);
                         goban.drawStones(stones);
-                        const groups = stones.group();
-                        goban.drawWhiteArea(groups);
+                        // const groups = stones.group();
+                        // goban.drawWhiteArea(groups);
                     });
 
                 } else if (handColor === "black") {
@@ -323,17 +323,6 @@ phina.define('MainScene', {
         const groups = stones.group();
         goban.drawWhiteArea(groups);
 
-        // const button = BasicButton({
-        //     text: "できた",
-        //     width: 200,
-        //     height: 80,
-        // }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(5));
-        // button.setInteractive(true);
-        // button.on("pointstart", function() {
-        //     const groups = stones.group();
-        //     goban.drawWhiteArea(groups);
-        // });
-
     },
 });
 
@@ -403,7 +392,7 @@ const Goban = function(stoneClickCallback) {
                     stroke: "black",
                 }).addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6));
             }
-            stoneShapes.push(stone);
+            stoneShapes.push({shape:stone, x: x, y: y});
     
             stone.setInteractive(true);
             stone.on("pointstart", function() {
@@ -419,22 +408,44 @@ const Goban = function(stoneClickCallback) {
                 fill: "rgba(0, 0, 0, 0)",
                 strokeWidth: 0,
             }).addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6));
-            stoneShapes.push(area);
+            stoneShapes.push({shape:area, x: x, y: y});
         }
     };
 
-    function clearStoneShapes() {
-        stoneShapes.forEach(function(stone) {
-            stone.remove();
-        });
-        stoneShapes.length = 0;
+    function removeStoneShapeFromStoneShapes(x, y) {
+        for (let i = 0; i < stoneShapes.length; i++) {
+            const stone = stoneShapes[i];
+            if (stone.x === x && stone.y ===y) {
+                stone.shape.remove();
+                stoneShapes.splice(i, 1);
+                return;
+            }
+        }
     }
 
+    self.lastStoneMap = null;
+
     self.drawStones = function(stones) {
-        clearStoneShapes();
-        stones.stoneMap().forEach(function(stone) {
-            createStone(stone.color, stone.x, stone.y);
-        });
+        if (self.lastStoneMap === null) {
+            stones.stoneMap().forEach(function(stone) {
+                createStone(stone.color, stone.x, stone.y);
+            });
+        } else {
+            stones.stoneMap().forEach(function(stone) {
+                const lastStone = getStoneFromLastStoneMap(stone.x, stone.y);
+                if (lastStone.color !== stone.color) {
+                    removeStoneShapeFromStoneShapes(stone.x, stone.y);
+                    createStone(stone.color, stone.x, stone.y);
+                }
+            });
+        }
+        self.lastStoneMap = stones.stoneMap();
+
+        function getStoneFromLastStoneMap(x, y) {
+            return self.lastStoneMap.find(stone => {
+                return stone.x === x && stone.y === y;
+            });
+        }
     };
 
     self.drawWhiteArea = function(groups) {
@@ -826,7 +837,7 @@ phina.define('BasicButton', {
         });
         const label = Label({
             text: param.text,
-            fontSize: 25,
+            fontSize: 30,
             fontWeight: 800,
         }).addChildTo(self);
         self.setInteractive(true);
