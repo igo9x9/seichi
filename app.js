@@ -158,7 +158,7 @@ phina.define('MainScene', {
         const commentBox = LabelArea({
             width: this.width - 50,
             height: 300,
-            text: "あなたは黒番だったとして、\n相手の白地を整地しましょう！\n白石をタップして移動します",
+            text: "あなたは黒番でした。\n相手の白地を整地しましょう！\n白石をタップして移動します",
             align: "center",
             verticalAlign: "middle",
             fill: "black",
