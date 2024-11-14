@@ -656,7 +656,7 @@ const Stones = function() {
             if (value === "empty") {
                 const x = Number(key.split(",")[0]);
                 const y = Number(key.split(",")[1]);
-                emptyCells.push({color: value, x: x, y: y});
+                emptyCells.push({x: x, y: y});
             }
         }
 
@@ -674,20 +674,21 @@ const Stones = function() {
         // 黒石に触れていないエリアだったならtrueを返す
         function checkCell(group, x, y) {
 
-            const target = getCell(x, y);
-            let ok = true;
-
             if (self.getColor(x, y) === "black") {
                 return false;
             }
             
-            if (!target) {
+            const targetIndex = getCellIndex(x, y);
+
+            if (targetIndex === -1) {
                 return true;
             }
 
-            group.push(target);
+            group.push({x: x, y: y});
 
-            removeCell(x, y);
+            removeCellByIndex(targetIndex);
+
+            let ok = true;
 
             if (checkCell(group, x + 1, y) === false) {
                 ok = false;
@@ -702,16 +703,16 @@ const Stones = function() {
                 ok = false;
             };
 
-            function getCell(x, y) {
-                return emptyCells.find(cell => cell.x === x && cell.y === y);
+            return ok;
+
+            function getCellIndex(x, y) {
+                return emptyCells.findIndex(cell => cell.x === x && cell.y === y);
             }
     
-            function removeCell(x, y) {
-                const index = emptyCells.findIndex(cell => cell.x === x && cell.y === y);
+            function removeCellByIndex(index) {
                 emptyCells.splice(index, 1);
             }
 
-            return ok;
         }
 
         return groups;
@@ -903,7 +904,6 @@ phina.define('BasicButton', {
     },
 });
 
-
 phina.main(function() {
     App = GameApp({
         assets: ASSETS,
@@ -924,7 +924,7 @@ phina.main(function() {
         ],
     });
 
-    App.fps = 60;
+    App.fps = 30;
 
     App.run();
 
