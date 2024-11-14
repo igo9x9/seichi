@@ -214,6 +214,13 @@ phina.define('MainScene', {
                     return;
                 }
 
+                // 黒の陣地に隣接している黒石はダメ
+                // 黒との境が分からなくなるから
+                if (stones.isNextToBlackArea(x, y)) {
+                    purupuru(stoneShape);
+                    return;
+                }
+
                 // タップした石を手に持つ
                 handColor = clickedColor;
                 handColorLastPosition = {x: x, y: y};
@@ -292,6 +299,7 @@ phina.define('MainScene', {
 
                 // 黒石を置くことはできない、ただし元の位置になら置ける
                 if (handColor === "black" && !(x === handColorLastPosition.x && y === handColorLastPosition.y)) {
+                    purupuruBan();
                     return;
                 }
 
@@ -315,6 +323,11 @@ phina.define('MainScene', {
                 .play();
             }
 
+            function purupuruBan() {
+                goban.ui.tweener
+                .by({x: -4}, 50).by({x: 8}, 50).by({x: -8}, 50).by({x: 4}, 50)
+                .play();
+            }
 
         };
         
@@ -603,6 +616,32 @@ const Stones = function() {
 
         const left = (x - 1) + "," + y;
         if (stones[left] === "empty") {
+            return true;
+        }
+
+        return false;
+    };
+
+    // 黒の陣地に触れているか
+    self.isNextToBlackArea = function (x, y) {
+
+        const top = x + "," + (y - 1);
+        if (stones[top] === "blackArea") {
+            return true;
+        }
+
+        const under = x + "," + (y + 1);
+        if (stones[under] === "blackArea") {
+            return true;
+        }
+
+        const right = (x + 1) + "," + y;
+        if (stones[right] === "blackArea") {
+            return true;
+        }
+
+        const left = (x - 1) + "," + y;
+        if (stones[left] === "blackArea") {
             return true;
         }
 
