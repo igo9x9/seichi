@@ -158,7 +158,7 @@ phina.define('MainScene', {
         const commentBox = LabelArea({
             width: this.width - 50,
             height: 300,
-            text: "白地（カラフルな部分）を整地して、\n地を数えやすくしましょう！",
+            text: "あなたは黒番だったとして、\n相手の白地を整地しましょう！\n白石をタップして移動します",
             align: "center",
             verticalAlign: "middle",
             fill: "black",
@@ -179,7 +179,7 @@ phina.define('MainScene', {
             if (goban.groupShapesCnt() !== areaCnt) {
                 comment = "境界があいまいになっています。\n黒石と白石を\n入れ替えることもできます！";
             } else if (result.tyouhoukeiNG > 1) {
-                comment = "できるだけ\n長方形にしてみましょう！";
+                comment = "まずはとにかく\n長方形にしてみましょう！";
             } else if (result.baisuNG > 1) {
                 comment = "あと少しです！\nそれぞれの地が５の倍数になると\n計算が楽になります";
             } else if (result.groupCnt === 1 && result.tyouhoukeiNG === 1) {
@@ -187,6 +187,8 @@ phina.define('MainScene', {
                 comment = "できるだけ\n長方形を目指しましょう！";
             } else if (result.dirtyNG >= 1) {
                 comment = "でこぼこを直してみましょう！";
+            } else if (result.tyouhoukeiNG === 0) {
+                comment = "完成！\nビューティフル！";
             } else {
                 comment = "完成！";
             }
