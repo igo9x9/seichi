@@ -1,6 +1,6 @@
 phina.globalize();
 
-const version = "0.7";
+const version = "1.0";
 
 ASSETS = {
     image: {
@@ -65,7 +65,7 @@ phina.define('MenuScene', {
                 width: 400,
                 height: 80,
                 text: "練習" + (i + 1),
-            }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.span(i * 2 + 3));
+            }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.span(i * 2 + 2));
     
             btn.setInteractive(true);
             btn.on("pointstart", () => {
@@ -75,6 +75,12 @@ phina.define('MenuScene', {
                 }).play();
             });
         });
+
+        Label({
+            text: "※難易度順というわけではありません。",
+            fontSize: 15,
+            fill: "black",
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(5.5));
 
         const backButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7));
         backButton.setInteractive(true);
@@ -105,7 +111,10 @@ phina.define('MainScene', {
         Label({
             text: "練習" + (param.kifuIndex + 1),
             fontSize: 30,
-            fontWeight: 800,
+            fill: "DimGray",
+            // fontWeight: 800,
+            // stroke: "white",
+            // strokeWidth: 8,
         }).addChildTo(this).setPosition(50,35);
 
         const backButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7));
@@ -149,8 +158,14 @@ phina.define('MainScene', {
         const commentBox = LabelArea({
             width: this.width - 50,
             height: 300,
-            text: "白地（カラフルな部分）を整地して、地を数えやすくしましょう！",
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.5));
+            text: "白地（カラフルな部分）を整地して、\n地を数えやすくしましょう！",
+            align: "center",
+            verticalAlign: "middle",
+            fill: "black",
+            fontWeight: 800,
+            // stroke: "DimGray",
+            // strokeWidth: 8,
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(5));
 
 
         function judge() {
@@ -162,18 +177,18 @@ phina.define('MainScene', {
 
             // とりあえず地の数が違っていたらだめ
             if (goban.groupShapesCnt() !== areaCnt) {
-                comment = "地の境界があいまいになっているようです。黒石と白石を入れ替えて、境界をはっきりさせておきましょう！";
+                comment = "境界があいまいになっています。\n黒石と白石を\n入れ替えることもできます！";
             } else if (result.tyouhoukeiNG > 1) {
-                comment = "できるだけ長方形になるようにしましょう！";
+                comment = "できるだけ\n長方形にしてみましょう！";
             } else if (result.baisuNG > 1) {
-                comment = "あと少しです！それぞれの地の数が５の倍数になるように工夫してみましょう！";
+                comment = "あと少しです！\nそれぞれの地が５の倍数になると\n計算が楽になります";
             } else if (result.groupCnt === 1 && result.tyouhoukeiNG === 1) {
                 // 地が１つしかなくて長方形ではないなら
-                comment = "できるだけ長方形になるようにしましょう！";
+                comment = "できるだけ\n長方形を目指しましょう！";
             } else if (result.dirtyNG >= 1) {
-                comment = "できるだけ長方形に近い形になるようにしましょう！";
+                comment = "でこぼこを直してみましょう！";
             } else {
-                comment = "完成です！";
+                comment = "完成！";
             }
             commentBox.text = comment;
         }
@@ -329,7 +344,8 @@ const Goban = function(stoneClickCallback) {
     const self = this;
 
     self.ui = RectangleShape({
-        fill: "DarkGoldenrod",
+        // fill: "DarkGoldenrod",
+        fill: "PeachPuff",
         strokeWidth: 0,
         width: 630,
         height: 630,
@@ -347,26 +363,46 @@ const Goban = function(stoneClickCallback) {
     (13).times(function(spanX) {
         var startPoint = Vector2((spanX - 6) * grid.unitWidth, -1 * grid.width/2),
             endPoint = Vector2((spanX - 6) * grid.unitWidth, grid.width/2);
-        
-        PathShape({paths:[startPoint, endPoint], stroke: "#111", strokeWidth: 2}).addChildTo(self.ui);
+
+        let strokeWidth = 2;
+        if (spanX === 0 || spanX === 12) {
+            strokeWidth = strokeWidth * 2;
+        }
+        PathShape({paths:[startPoint, endPoint], stroke: "darkgray", strokeWidth: strokeWidth}).addChildTo(self.ui);
     });
 
     (13).times(function(spanY) {
         var startPoint = Vector2(-1 * grid.width/2, (spanY - 6) * grid.unitWidth),
             endPoint = Vector2(grid.width/2, (spanY - 6) * grid.unitWidth);
         
-        PathShape({paths:[startPoint, endPoint], stroke: "#111", strokeWidth: 2}).addChildTo(self.ui);
+        let strokeWidth = 2;
+        if (spanY === 0 || spanY === 12) {
+            strokeWidth = strokeWidth * 2;
+        }
+        PathShape({paths:[startPoint, endPoint], stroke: "gray", strokeWidth: strokeWidth}).addChildTo(self.ui);
     });
 
     const createStone = function(color, x, y) {
         if (color === "black" || color === "white" || color === "empty") {
 
-            const stone = CircleShape({
-                strokeWidth: 1,
-                radius: grid.unitWidth / 2,
-                fill: color === "empty" ? "transparent" : color,
-                strokeWidth: 0,
-            }).addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6));
+            let stone;
+
+            if (color === "empty") {
+                stone = RectangleShape({
+                    width: grid.unitWidth,
+                    height: grid.unitWidth,
+                    fill: "transparent",
+                    strokeWidth: 0,
+                }).addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6));
+            } else {
+                stone = CircleShape({
+                    strokeWidth: 1,
+                    radius: grid.unitWidth / 2 - 2,
+                    fill: color,
+                    strokeWidth: 4,
+                    stroke: "black",
+                }).addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6));
+            }
             stoneShapes.push(stone);
     
             stone.setInteractive(true);
@@ -418,12 +454,12 @@ const Goban = function(stoneClickCallback) {
 
                 const area = RectangleShape({
                     strokeWidth: 0,
-                    width: grid.unitWidth + 1,
-                    height: grid.unitWidth + 1,
+                    width: grid.unitWidth + 0.25,
+                    height: grid.unitWidth + 0.25,
                     fill: areaColor,
                     strokeWidth: 0,
                 }).addChildTo(self.ui).setPosition(grid.span(group[n].x - 6), grid.span(group[n].y - 6));
-                area.alpha = 0.8;
+                area.alpha = 0.5;
                 groupShapes.push(area);
 
             }
@@ -436,13 +472,10 @@ const Goban = function(stoneClickCallback) {
 
     self.createHandStone = function(color, x, y) {
         return Flow(function(resolve) {
-            self.handStoneShape = CircleShape({
-                strokeWidth: 1,
-                radius: grid.unitWidth / 2,
-                fill: color,
-                strokeWidth: 0,
-            }).addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6));
-            self.handStoneShape.tweener.to({x: 0, y:-350}, 200)
+            createHandStoneShape(color);
+            self.handStoneShape
+            .addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6))
+            .tweener.to({x: 0, y:-350}, 300)
             .call(function() {
                 resolve();
             })
@@ -452,7 +485,13 @@ const Goban = function(stoneClickCallback) {
 
     self.removeHandStone = function(x, y) {
         return Flow(function(resolve) {
-            self.handStoneShape.tweener.to({x: grid.span(x - 6), y:grid.span(y - 6)}, 200)
+            const xx = self.handStoneShape.x;
+            const yy = self.handStoneShape.y;
+            const color = self.handStoneShape.__fill;
+            createHandStoneShape(color);
+            self.handStoneShape
+            .addChildTo(self.ui).setPosition(xx, yy)
+            .tweener.to({x: grid.span(x - 6), y:grid.span(y - 6)}, 300)
             .call(function() {
                 resolve();
                 self.handStoneShape.remove();
@@ -461,15 +500,30 @@ const Goban = function(stoneClickCallback) {
         });
     };
 
+    function createHandStoneShape(color) {
+        if (self.handStoneShape) {
+            self.handStoneShape.remove();
+            self.handStoneShape = null;
+        }
+        self.handStoneShape = CircleShape({
+            strokeWidth: 1,
+            radius: grid.unitWidth / 2,
+            fill: color,
+            strokeWidth: 4,
+            stroke: "black",
+        });
+    }
+
     self.moveStone = function(color, x1, y1, x2, y2) {
         return Flow(function(resolve) {
             const stone = CircleShape({
                 strokeWidth: 1,
                 radius: grid.unitWidth / 2,
                 fill: color,
-                strokeWidth: 0,
+                strokeWidth: 4,
+                stroke: "black",
             }).addChildTo(self.ui).setPosition(grid.span(x1 - 6), grid.span(y1 - 6));
-            stone.tweener.to({x: grid.span(x2 - 6), y:grid.span(y2 - 6)}, 200)
+            stone.tweener.to({x: grid.span(x2 - 6), y:grid.span(y2 - 6)}, 300)
             .call(function() {
                 resolve();
                 stone.remove();
