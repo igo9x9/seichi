@@ -2,7 +2,7 @@ phina.globalize();
 
 const version = "1.2";
 
-const info = "2024.11.15 碁石を連続して取り除けるようになりました";
+const info = "碁石を連続して\n取り除けるようになりました！";
 
 ASSETS = {
     image: {
@@ -39,7 +39,7 @@ phina.define('TitleScene', {
             text: info,
             fontSize: 22,
             fill: "black",
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(2));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(3));
 
         this.setInteractive(true);
         this.on("pointstart", () => {
@@ -217,6 +217,12 @@ phina.define('MainScene', {
             // 黒石をクリックした場合
             if (clickedColor === "black") {
 
+                // すでに黒石を持っているならダメ
+                if (goban.getTopHandStoneColor() === "black") {
+                    purupuru(stoneShape);
+                    return;
+                }
+
                 // 黒石を取れるのは、呼吸点を持つ黒石の場合のみ
                 if (stones.hasKokyuten(x, y) === false) {
                     purupuru(stoneShape);
@@ -361,6 +367,17 @@ const Goban = function(stoneClickCallback) {
         strokeWidth: 0,
         width: 630,
         height: 630,
+    });
+
+    self.ui.setInteractive(true);
+    self.ui.on("pointstart", function(e) {
+        const mark = CircleShape({
+            radius: 20,
+            fill: "transparent",
+            strokeWidth: 5,
+            stroke: "red",
+        }).addChildTo(self.ui).setPosition(e.pointer.position.x - self.ui.x, e.pointer.position.y - self.ui.y);
+        mark.tweener.to({alpha:0, radius: 30}, 500).call(() => mark.remove()).play();
     });
 
     const grid = Grid({width: self.ui.width - 50, columns: 12});
