@@ -1,6 +1,8 @@
 phina.globalize();
 
-const version = "1.1";
+const version = "1.2";
+
+const info = "2024.11.15 碁石を連続して取り除けるようになりました";
 
 ASSETS = {
     image: {
@@ -33,6 +35,12 @@ phina.define('TitleScene', {
             fill: "black",
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-1.3));
 
+        Label({
+            text: info,
+            fontSize: 22,
+            fill: "black",
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(2));
+
         this.setInteractive(true);
         this.on("pointstart", () => {
             mouse.tweener.by({y:-20}, 100).by({y:20}, 100)
@@ -48,7 +56,7 @@ phina.define('TitleScene', {
             fontSize: 20,
             fill: "black",
             fontWeight: 800,
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(4));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(5));
 
     },
 });
@@ -105,8 +113,7 @@ phina.define('MainScene', {
 
         this.backgroundColor = "PeachPuff";
 
-        let handColor = "empty";
-        let handColorLastPosition = {x: null, y: null};
+        let handBlackStoneLastPosition = {x: null, y: null};
 
         const stones = new Stones();
 
@@ -160,7 +167,7 @@ phina.define('MainScene', {
         const commentBox = LabelArea({
             width: this.width - 50,
             height: 300,
-            text: "あなたは黒番でした。\n相手の白地を整地しましょう！\n白石をタップして移動します",
+            text: "黒番のあなたは白地を整地します。\n白石をタップして移動しましょう！",
             align: "center",
             verticalAlign: "middle",
             fill: "black",
@@ -175,20 +182,26 @@ phina.define('MainScene', {
             let comment = "";
             const result = stones.judge();
 
-            backButton.show();
+            // 石を持っている間は正しく評価できない
+            if (goban.getTopHandStoneColor() !== null) {
+                commentBox.tweener.to({alpha: 0}, 200).play();
+                return;
+            }
+
+            commentBox.alpha = 1;
 
             // とりあえず地の数が違っていたらだめ
             if (goban.groupShapesCnt() !== areaCnt) {
                 comment = "境界があいまいになっています。\n黒石と白石を\n入れ替えることもできます！";
             } else if (result.tyouhoukeiNG > 1) {
-                comment = "まずはとにかく\n長方形にしてみましょう！";
+                comment = "面積が計算しやすいように\n長方形にしてみましょう！";
             } else if (result.baisuNG > 1) {
-                comment = "あと少しです！\nそれぞれの地が５の倍数になると\n計算が楽になります";
+                comment = "あと少しです！\nそれぞれの地が５の倍数になると\n地の合算が楽になります";
             } else if (result.groupCnt === 1 && result.tyouhoukeiNG === 1) {
                 // 地が１つしかなくて長方形ではないなら
                 comment = "できるだけ\n長方形を目指しましょう！";
             } else if (result.dirtyNG >= 1) {
-                comment = "でこぼこを直してみましょう！";
+                comment = "でこぼこを減らしてみましょう！";
             } else if (result.tyouhoukeiNG === 0) {
                 comment = "完成！\nビューティフル！";
             } else {
@@ -204,12 +217,6 @@ phina.define('MainScene', {
             // 黒石をクリックした場合
             if (clickedColor === "black") {
 
-                // 既に石を持っているなら、なにも起きない
-                if (handColor !== "empty") {
-                    purupuru(stoneShape);
-                    return;
-                }
-
                 // 黒石を取れるのは、呼吸点を持つ黒石の場合のみ
                 if (stones.hasKokyuten(x, y) === false) {
                     purupuru(stoneShape);
@@ -224,8 +231,7 @@ phina.define('MainScene', {
                 }
 
                 // タップした石を手に持つ
-                handColor = clickedColor;
-                handColorLastPosition = {x: x, y: y};
+                handBlackStoneLastPosition = {x: x, y: y};
                 stoneShape.hide();
                 wait = true;
                 goban.createHandStone("black", x, y).then(function() {
@@ -233,6 +239,7 @@ phina.define('MainScene', {
                     goban.drawStones(stones);
                     const groups = stones.group();
                     goban.drawWhiteArea(groups);
+                    judge();
                     wait = false;
                 });
 
@@ -242,41 +249,20 @@ phina.define('MainScene', {
 
             // 白石をクリックした場合
             if (clickedColor === "white") {
-                // 石を持っていないなら、タップした白石を持つ
-                if (handColor === "empty") {
-        
-                    // ただし、呼吸点を持たない石はダメ
-                    if (stones.hasKokyuten(x, y) === false) {
-                        purupuru(stoneShape);
-                        return;
-                    }
-    
-                    handColor = clickedColor;
-                    handColorLastPosition = {x: x, y: y};
-                    stoneShape.hide();
-                    wait = true;
-                    goban.createHandStone("white", x, y).then(function() {
-                        stones.removeStone(x, y);
-                        goban.drawStones(stones);
-                        wait = false;
-                    });
 
-                } else if (handColor === "black") {
-                    // 黒石を持っている場合、呼吸点を持たない白石となら交換可能
-                    if (stones.hasKokyuten(x, y) === true) {
-                        purupuru(stoneShape);
-                        return;
-                    }
+                // 黒石を持っている場合、白石が呼吸点を持たないなら交換して終わり
+                if (goban.getTopHandStoneColor() === "black" && stones.hasKokyuten(x, y) === false) {
+
                     stones.removeStone(x, y);
                     stoneShape.hide();
 
                     wait = true;
-                    goban.moveStone("white", x, y, handColorLastPosition.x, handColorLastPosition.y)
+                    goban.moveStone("white", x, y, handBlackStoneLastPosition.x, handBlackStoneLastPosition.y)
                     .then(function() {
-                        stones.putStone("white", handColorLastPosition.x, handColorLastPosition.y);
+                        stones.putStone("white", handBlackStoneLastPosition.x, handBlackStoneLastPosition.y);
                         goban.drawStones(stones);
                         handColor = "empty";
-                        handColorLastPosition = {x: null, y: null};
+                        handBlackStoneLastPosition = {x: null, y: null};
     
                         goban.removeHandStone(x, y).then(function() {
                             stones.putStone("black", x, y);
@@ -287,24 +273,39 @@ phina.define('MainScene', {
                             wait = false;
                         });
                     });
-    
-
-                } else {
-                    // 白石をクリックしてもなにも起きない
-                    purupuru(stoneShape);
+                    return;
                 }
+
+                // 石を持っていないか白石を持っているのなら、かつ、呼吸点を持つ白石なら、手に持って終わり
+                if (goban.getTopHandStoneColor() !== "black" && stones.hasKokyuten(x, y) === true) {
+                    handColor = clickedColor;
+                    handBlackStoneLastPosition = {x: x, y: y};
+                    stoneShape.hide();
+                    wait = true;
+                    goban.createHandStone("white", x, y).then(function() {
+                        stones.removeStone(x, y);
+                        goban.drawStones(stones);
+                        wait = false;
+                    });
+                }
+                
+                // 白石をクリックしてもなにも起きない
+                purupuru(stoneShape);
+
             }
 
             // 空点をクリックした場合
             if (clickedColor === "empty") {
 
+                const handColor = goban.getTopHandStoneColor();
+
                 // 石を持っていないならなにも起きない
-                if (handColor === "empty") {
+                if (handColor === null) {
                     return;
                 }
 
                 // 黒石を置くことはできない、ただし元の位置になら置ける
-                if (handColor === "black" && !(x === handColorLastPosition.x && y === handColorLastPosition.y)) {
+                if (handColor === "black" && !(x === handBlackStoneLastPosition.x && y === handBlackStoneLastPosition.y)) {
                     purupuruBan();
                     return;
                 }
@@ -313,8 +314,7 @@ phina.define('MainScene', {
                 goban.removeHandStone(x, y).then(function() {
                     // 持っている石を置く
                     stones.putStone(handColor, x, y);
-                    handColor = "empty";
-                    handColorLastPosition = {x: null, y: null};
+                    handBlackStoneLastPosition = {x: null, y: null};
 
                     goban.drawStones(stones);
                     const groups = stones.group();
@@ -503,50 +503,82 @@ const Goban = function(stoneClickCallback) {
         }
     };
 
-    self.handStoneShape = null;
+    self.handStoneShapes = [];
+
+    // 持っている石で一番前の石の色を返す
+    self.getTopHandStoneColor = function() {
+        if (self.handStoneShapes.length === 0) {
+            return null;
+        }
+        return self.handStoneShapes[0].__fill;
+    };
 
     self.createHandStone = function(color, x, y) {
         return Flow(function(resolve) {
-            createHandStoneShape(color);
-            self.handStoneShape
+
+            // アニメーション用の石を生成してself.handStoneShapesに追加
+            addHandStoneShape(color);
+
+            // 石を手に移動するアニメーション
+            self.handStoneShapes[0]
             .addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6))
             .tweener.to({x: 0, y:-350}, 200)
             .call(function() {
                 resolve();
             })
             .play();
+
+            // と同時に、すでに持っている石集合を右にずらす
+            if (self.handStoneShapes.length > 1) {
+                self.handStoneShapes.forEach((stone, i) => {
+                    if (i === 0) return;
+                    stone.tweener.by({x: 10}, 50).play();
+                });
+            }
         });
     };
 
     self.removeHandStone = function(x, y) {
         return Flow(function(resolve) {
-            const xx = self.handStoneShape.x;
-            const yy = self.handStoneShape.y;
-            const color = self.handStoneShape.__fill;
-            createHandStoneShape(color);
-            self.handStoneShape
-            .addChildTo(self.ui).setPosition(xx, yy)
+            const xx = self.handStoneShapes[0].x;
+            const yy = self.handStoneShapes[0].y;
+            const color = self.handStoneShapes[0].__fill;
+
+            // 表示順の関係で、アニメーションする石を作り直す
+
+            // 先頭の石を破棄
+            const oldStone = self.handStoneShapes.shift();
+            oldStone.remove();
+
+            const newStone = createHandStoneShape(color);
+            newStone.addChildTo(self.ui).setPosition(xx, yy)
             .tweener.to({x: grid.span(x - 6), y:grid.span(y - 6)}, 200)
             .call(function() {
+                newStone.remove();
                 resolve();
-                self.handStoneShape.remove();
             })
             .play();
+
+            // と同時に、すでに持っている石集合を左にずらす
+            self.handStoneShapes.forEach(stone => {
+                stone.tweener.by({x: -10}, 50).play();
+            });
         });
     };
 
     function createHandStoneShape(color) {
-        if (self.handStoneShape) {
-            self.handStoneShape.remove();
-            self.handStoneShape = null;
-        }
-        self.handStoneShape = CircleShape({
+        return CircleShape({
             strokeWidth: 1,
             radius: grid.unitWidth / 2,
             fill: color,
             strokeWidth: 4,
             stroke: "black",
         });
+    }
+
+    function addHandStoneShape(color) {
+        // 先頭に石を追加
+        self.handStoneShapes.unshift(createHandStoneShape(color));
     }
 
     self.moveStone = function(color, x1, y1, x2, y2) {
