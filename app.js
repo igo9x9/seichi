@@ -440,16 +440,6 @@ const Goban = function(stoneClickCallback) {
                 stoneClickCallback(x, y, stone);
             });
 
-
-        } else if (color === "blackArea") {
-            const area = RectangleShape({
-                strokeWidth: 0,
-                width: Math.ceil(grid.unitWidth),
-                height: Math.ceil(grid.unitWidth),
-                fill: "rgba(0, 0, 0, 0)",
-                strokeWidth: 0,
-            }).addChildTo(self.ui).setPosition(grid.span(x - 6), grid.span(y - 6));
-            stoneShapes.push({shape:area, x: x, y: y});
         }
     };
 
