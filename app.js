@@ -179,35 +179,37 @@ phina.define('MainScene', {
 
         function judge() {
 
-            let comment = "";
-            const result = stones.judge();
-
             // 石を持っている間は正しく評価できない
             if (goban.getTopHandStoneColor() !== null) {
                 commentBox.tweener.to({alpha: 0}, 200).play();
                 return;
             }
 
-            commentBox.alpha = 1;
+            setTimeout(() => {
 
-            // とりあえず地の数が違っていたらだめ
-            if (goban.groupShapesCnt() !== areaCnt) {
-                comment = "境界があいまいになっています。\n黒石と白石を\n入れ替えることもできます！";
-            } else if (result.tyouhoukeiNG > 1) {
-                comment = "面積が計算しやすいように\n長方形にしてみましょう！";
-            } else if (result.baisuNG > 1) {
-                comment = "あと少しです！\nそれぞれの地が５の倍数になると\n地の合算が楽になります";
-            } else if (result.groupCnt === 1 && result.tyouhoukeiNG === 1) {
-                // 地が１つしかなくて長方形ではないなら
-                comment = "できるだけ\n長方形を目指しましょう！";
-            } else if (result.dirtyNG >= 1) {
-                comment = "でこぼこを減らしてみましょう！";
-            } else if (result.tyouhoukeiNG === 0) {
-                comment = "完成！\nビューティフル！";
-            } else {
-                comment = "完成！";
-            }
-            commentBox.text = comment;
+                const result = stones.judge();
+
+                // とりあえず地の数が違っていたらだめ
+                if (goban.groupShapesCnt() !== areaCnt) {
+                    comment = "境界があいまいになっています。\n黒石と白石を\n入れ替えることもできます！";
+                } else if (result.tyouhoukeiNG > 1) {
+                    comment = "面積が計算しやすいように\n長方形にしてみましょう！";
+                } else if (result.baisuNG > 1) {
+                    comment = "あと少しです！\nそれぞれの地が５の倍数になると\n地の合算が楽になります";
+                } else if (result.groupCnt === 1 && result.tyouhoukeiNG === 1) {
+                    // 地が１つしかなくて長方形ではないなら
+                    comment = "できるだけ\n長方形を目指しましょう！";
+                } else if (result.dirtyNG >= 1) {
+                    comment = "でこぼこを減らしてみましょう！";
+                } else if (result.tyouhoukeiNG === 0) {
+                    comment = "完成！\nビューティフル！";
+                } else {
+                    comment = "完成！";
+                }
+
+                commentBox.text = comment;
+                commentBox.alpha = 1;
+            }, 1);
         }
 
         const stoneClickCallback = function(x, y, stoneShape) {
